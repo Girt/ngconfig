@@ -1,0 +1,125 @@
+#!/bin/sh
+#
+#-
+# BSD license
+# 
+# Copyright (c) 2023 Maxim Razumeyko
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+#
+# Redistributions of source code must retain the above copyright notice,
+# this list of conditions and the following disclaimer.
+#
+# Redistributions in binary form must reproduce the above copyright notice, 
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+# INCLUDING, BUT NOT LIMITED TO, THE IMPLIED #WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+# PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE FOR ANY #DIRECT, INDIRECT,
+# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; #LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+# AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT #(INCLUDING NEGLIGENCE
+# OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+# OF SUCH DAMAGE.
+#
+
+# PROVIDE: ngbridge
+# REQUIRE: NETWORKING
+# BEFORE: vm
+
+name="ngbridge"
+desc="Netgraph Bridge tool"
+rcvar="ngconfig_bridge_enable"
+extra_commands=status
+start_precmd="${name}_prestart"
+start_cmd="${name}_start"
+stop_cmd="${name}_stop"
+status_cmd="${name}_status"
+
+load_rc_config $name
+
+ngconfig_bridge_enable=${ngconfig_bridge_enable:-"NO"}
+
+ngctl="/usr/sbin/ngctl"
+
+#
+# For each physical bridge have:
+#       ngconfig_bridge_<ifname>="<bridge name>"
+# e.g.
+#       ngconfig_bridge_igb0="br-public"
+#
+# This creates an ng_bridge "br-public" with two hooks link0 and link1 
+# attached to the interface igb0 via lower and upper
+#
+
+ngbridge_start()
+{
+        # Important to create bridges first
+        for bridge in `list_vars ngconfig_bridge*`
+        do
+                ethname="${bridge##ngconfig_bridge_}"
+                brname=$(eval echo \$${bridge})
+
+                if ! ngctl status ${brname}: >/dev/null 2>&1; then
+
+                        ${ngctl} -f- <<END
+														mkpeer ${ethname}: bridge lower link0
+														name ${ethname}:lower ${brname}
+														connect ${ethname}: ${brname}: upper link1
+
+														msg ${ethname}: setpromisc 1
+														msg ${ethname}: setautosrc 0
+												END
+                else
+                        echo "Bridge" ${brname} "already exists."
+                fi
+
+        done
+
+
+}
+
+ngbridge_status()
+{
+        for bridge in `list_vars ngconfig_bridge*`
+        do
+                ethname="${bridge##ngconfig_bridge_}"
+                brname=$(eval echo \$${bridge})
+
+                echo '### Bridge ' ${brname}  '(Iface: ' ${ethname} ') ###'
+                if ngctl status ${brname}: >/dev/null 2>&1; then
+                        ${ngctl} show ${brname}:
+                else
+                         echo "Bridge" ${brname} "not created."
+                fi
+        done
+}
+
+ngbridge_stop()
+{
+        for bridge in `list_vars ngconfig_bridge*`
+        do
+                ethname="${bridge##ngconfig_bridge_}"
+                brname=$(eval echo \$${bridge})
+
+                if ngctl status ${brname}: >/dev/null 2>&1; then
+
+                        ${ngctl} shutdown ${brname}:
+
+                        ${ngctl} msg ${ethname}: setpromisc 0
+                        ${ngctl} msg ${ethname}: setautosrc 1
+                else
+                        echo "Bridge" ${brname} "not created."
+                fi
+        done
+}
+
+ngbridge_prestart()
+{
+        required_modules="$required_modules ng_bridge ng_ether"
+}
+
+
+run_rc_command $*
