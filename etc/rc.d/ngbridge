@@ -1,4 +1,4 @@
-#!/bin/sh
+s#!/bin/sh
 #
 
 # PROVIDE: ngbridge
@@ -41,15 +41,15 @@ ngbridge_start()
                 if ! ngctl status ${brname}: >/dev/null 2>&1; then
 
                         ${ngctl} -f- <<END
-														mkpeer ${ethname}: bridge lower link0
-														name ${ethname}:lower ${brname}
-														connect ${ethname}: ${brname}: upper link1
-
-														msg ${ethname}: setpromisc 1
-														msg ${ethname}: setautosrc 0
-												END
-                else
-                        echo "Bridge" ${brname} "already exists."
+				mkpeer ${ethname}: bridge lower link0
+				name ${ethname}:lower ${brname}
+				connect ${ethname}: ${brname}: upper link1
+	
+				msg ${ethname}: setpromisc 1
+				msg ${ethname}: setautosrc 0
+			END
+		else
+			echo "Bridge" ${brname} "already exists."
                 fi
 
         done
