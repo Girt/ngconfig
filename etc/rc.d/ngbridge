@@ -1,13 +1,15 @@
-s#!/bin/sh
+#!/bin/sh
 #
 
 # PROVIDE: ngbridge
 # REQUIRE: NETWORKING
 # BEFORE: vm
 
+. /etc/rc.subr
+
 name="ngbridge"
 desc="Netgraph Bridge tool"
-rcvar="ngconfig_bridge_enable"
+rcvar="ngconfig_ngbridge_enable"
 extra_commands=status
 start_precmd="${name}_prestart"
 start_cmd="${name}_start"
@@ -16,7 +18,7 @@ status_cmd="${name}_status"
 
 load_rc_config $name
 
-ngconfig_bridge_enable=${ngconfig_bridge_enable:-"NO"}
+ngconfig_ngbridge_enable=${ngconfig_ngbridge_enable:-"NO"}
 
 ngctl="/usr/sbin/ngctl"
 
@@ -26,7 +28,7 @@ ngctl="/usr/sbin/ngctl"
 # e.g.
 #       ngconfig_bridge_igb0="br-public"
 #
-# This creates an ng_bridge "br-public" with two hooks link0 and link1 
+# This creates an ng_bridge "br-public" with two hooks link0 and link1
 # attached to the interface igb0 via lower and upper
 #
 
@@ -38,18 +40,18 @@ ngbridge_start()
                 ethname="${bridge##ngconfig_bridge_}"
                 brname=$(eval echo \$${bridge})
 
-                if ! ngctl status ${brname}: >/dev/null 2>&1; then
+                if ! ${ngctl} status ${brname}: >/dev/null 2>&1; then
 
                         ${ngctl} -f- <<END
-				mkpeer ${ethname}: bridge lower link0
-				name ${ethname}:lower ${brname}
-				connect ${ethname}: ${brname}: upper link1
-	
-				msg ${ethname}: setpromisc 1
-				msg ${ethname}: setautosrc 0
-			END
-		else
-			echo "Bridge" ${brname} "already exists."
+                                mkpeer ${ethname}: bridge lower link0
+                                name ${ethname}:lower ${brname}
+                                connect ${ethname}: ${brname}: upper link1
+
+                                msg ${ethname}: setpromisc 1
+                                msg ${ethname}: setautosrc 0
+END
+                else
+                        echo "Bridge" ${brname} "already exists."
                 fi
 
         done
@@ -99,3 +101,4 @@ ngbridge_prestart()
 
 
 run_rc_command $*
+
