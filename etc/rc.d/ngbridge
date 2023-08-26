@@ -51,7 +51,7 @@ ngbridge_start()
                                 msg ${ethname}: setautosrc 0
 END
                 else
-                        echo "Bridge" ${brname} "already exists."
+                        echo "ngconfig: bridge" ${brname} "already exist"
                 fi
 
         done
@@ -70,7 +70,7 @@ ngbridge_status()
                 if ngctl status ${brname}: >/dev/null 2>&1; then
                         ${ngctl} show ${brname}:
                 else
-                         echo "Bridge" ${brname} "not created."
+                         echo "bridge" ${brname} "does not exist"
                 fi
         done
 }
@@ -89,7 +89,7 @@ ngbridge_stop()
                         ${ngctl} msg ${ethname}: setpromisc 0
                         ${ngctl} msg ${ethname}: setautosrc 1
                 else
-                        echo "Bridge" ${brname} "not created."
+                        echo "bridge" ${brname} "does not exist"
                 fi
         done
 }
